@@ -1,0 +1,124 @@
+services:
+  # 데이터베이스 서버
+  overclock-database:
+    profiles:
+      - database
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: overclock-database
+    restart: unless-stopped
+    # 호스트에서 컨테이너 내부의 DB 서버에 직접 접근이 필요한 경우 주석 해제
+    # ports:
+    #   - "3306:3306"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PUID:-1000}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+    volumes:
+      - ./database:/config
+
+
+
+  # 운영용 서버 구성
+
+  overclock-backend-prod:
+    profiles:
+      - prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    image: overclock-backend-prod
+    container_name: overclock-backend-prod
+    restart: unless-stopped
+    depends_on: &depends_on
+      overclock-database:
+        condition: service_started
+        required: false
+    ports:
+      - "${BE_PORT:-8000}:8000"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PUID:-1000}
+      - DB_HOST=${DB_HOST:-overclock-database}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+
+  overclock-frontend-prod:
+    profiles:
+      - prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+    image: overclock-frontend-prod
+    container_name: overclock-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "${FE_PORT:-3000}:3000"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PUID:-1000}
+      - VITE_BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
+
+
+
+  # 개발용 서버 구성
+
+  overclock-backend-dev:
+    profiles:
+      - dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    image: overclock-backend-dev
+    container_name: overclock-backend-dev
+    restart: unless-stopped
+    depends_on: *depends_on
+    ports:
+      - "${BE_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app:ro
+      - venv:/venv
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PUID:-1000}
+      - DB_HOST=${DB_HOST:-overclock-database}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+
+  overclock-frontend-dev:
+    profiles:
+      - dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    image: overclock-frontend-dev
+    container_name: overclock-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "${FE_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app:ro
+      - node_modules:/app/node_modules
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PUID:-1000}
+      - VITE_BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
+
+volumes:
+  venv:
+  node_modules:

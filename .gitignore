@@ -1,6 +1,18 @@
+front
+back
 frontend
 backend
+database
 
+# .env
 .env
 .env.*
-!.env*example*
+!.env*.example*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+logs
+*.log
