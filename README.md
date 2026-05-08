@@ -1,22 +1,25 @@
 # monorepo 구성
 
-이 저장소 다운로드 후
+> [!IMPORTANT]
+> 저장소를 `git clone`이 아닌 직접 다운로드(`Download ZIP`)한 경우에는 폴더 구조가 다르기 때문에
+> 2번의 트리 구조를 꼭 참고하시길 바랍니다.
 
-- [bacnend](https://github.com/team-overclock/backend)
-- [frontend](https://github.com/team-overclock/frontend)
+1. 저장소 `git clone` 또는 로컬에 있는 폴더 사용
 
-저장소를 다운로드 받거나 로컬에 있는 폴더를
-하위에 두시면 됩니다.
+    - [monorepo](https://github.com/team-overclock/monorepo) (현재 저장소)
+    - [bacnend](https://github.com/team-overclock/backend)
+    - [frontend](https://github.com/team-overclock/frontend)
 
-## 예시 tree
+2. `backend`, `frontend`를 `monorepo` 하위로 이동
 
-```plain
-.
-├── backend/
-├── frontend/
-├── docker-compose.yml
-└── README.md
-```
+    ```plain
+    monorepo/
+    ├── README.md
+    ├── backend/
+    │   └── README.md
+    └── frontend/
+        └── README.md
+    ```
 
 ## Docker
 
@@ -24,7 +27,7 @@
 > 도커로 서비스를 구성하는 방법입니다.
 > 서비스별 전용 사용법은 각 저장소의 README 참고.
 
-1. `git clone` 또는 소스코드 다운로드
+1. [monorepo 구성](#monorepo-구성)
 2. `.env.example` 파일을 `.env`로 복사
 3. 필요한 경우 `.env`, `docker-compose.yml` 파일 내용 수정
     - 소스코드 변경 즉시 적용되는 개발용으로 구성하려면 `.env` 파일 내 `COMPOSE_PROFILES` 수정 필요
