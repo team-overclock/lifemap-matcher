@@ -29,10 +29,10 @@
 
 1. [monorepo 구성](#monorepo-구성)
 2. `.env.example` 파일을 `.env`로 복사
-3. 필요한 경우 `.env`, `docker-compose.yml` 파일 내용 수정
-    - 소스코드 변경 즉시 적용되는 개발용으로 구성하려면 `.env` 파일 내 `COMPOSE_PROFILES` 수정 필요
+3. `frontend` 폴더 내 `node_modules` 폴더 생성
+4. 필요한 경우 `.env`, `docker-compose.yml` 파일 내용 수정
     - 호스트에서 DB 서버에 직접 접근이 필요한 경우 `docker-compose.yml` 파일 내 관련 라인 주석 해제 필요
-4. CMD 오픈 및 작업 폴더 이동
+5. CMD 오픈 및 작업 폴더 이동
 
     ```shell
     > D:  # 드라이브 이등 시 cd 생략
