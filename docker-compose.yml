@@ -6,9 +6,8 @@ services:
     image: lscr.io/linuxserver/mariadb:latest
     container_name: overclock-database
     restart: unless-stopped
-    # 호스트에서 컨테이너 내부의 DB 서버에 직접 접근이 필요한 경우 주석 해제
-    # ports:
-    #   - "3306:3306"
+    ports:
+      - "3306:3306"
     environment:
       - TZ=${TZ}
       - PUID=${PUID:-1000}
@@ -49,6 +48,10 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
+      - GUEST_LOGIN_ENABLE=${GUEST_LOGIN_ENABLE}
+      - GUEST_USERNAME=${GUEST_USERNAME}
+      - GUEST_EMAIL=${GUEST_EMAIL}
+      - GUEST_PASSWORD=${GUEST_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
 
   overclock-frontend-prod:

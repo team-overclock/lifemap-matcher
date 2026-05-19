@@ -14,7 +14,7 @@
 
 
 
-## 최종 tree 구조
+## 참고: 최종 tree 구조
 
 ```plain
 (monorepo)
@@ -48,7 +48,7 @@
     - [frontend](https://github.com/team-overclock/frontend)
 1. `monorepo` 폴더 내 `.env.example` 파일을 `.env`로 복사
 1. `frontend` 폴더 내 빈 폴더 `node_modules` 생성
-1. 위 [최종 tree 구조](#최종-tree-구조)를 참고하여 폴더 이동 및 폴더명 변경
+1. 위 [최종 tree 구조](#참고-최종-tree-구조)를 참고하여 폴더 이동 및 폴더명 변경
 
 ### git clone
 
@@ -82,7 +82,7 @@
     git clone https://github.com/team-overclock/frontend
     ```
 
-1. `.env.example` 파일을 `.env`로 복사
+1. `.env.example` 파일을 `.env`로 복사 (컨테이너가 아닌 호스트에서 백/프론트 서버를 직접 실행하는 경우, 각 폴더 내 파일들도 복사)
 
     ```shell
     copy .env.example .env
