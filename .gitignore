@@ -3,6 +3,7 @@ back
 frontend
 backend
 database
+redis
 
 # .env
 .env
