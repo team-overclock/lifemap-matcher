@@ -1,3 +1,8 @@
+# ==============================================================================
+# Overclock Project - Docker Compose Configuration (docker-compose.yml)
+# ==============================================================================
+
+# 공통 헬스체크 설정 템플릿 (앵커로 사용)
 x-health-check-times: &healthcheck_times
   interval: 5s
   timeout: 5s
@@ -7,7 +12,11 @@ x-health-check-times: &healthcheck_times
 
 
 services:
-  # redis 캐시 서버
+  # ----------------------------------------------------------------------------
+  # 1. CACHE & MONITORING SERVICES (캐시 서버)
+  # ----------------------------------------------------------------------------
+
+  # Redis 서버
   overclock-redis:
     profiles:
       - redis
@@ -21,29 +30,37 @@ services:
         - redis-cli
         - ping
     volumes:
-      - ./redis/data:/data
+      - redis:/data
     environment:
-      - TZ=${TZ}
+      TZ: ${TZ}
 
-  # redis 모니터링 및 관리 도구
+  # Redis 모니터링 및 관리 도구 (웹 GUI)
   overclock-redisinsight:
+    profiles:
+      - redisinsight
     container_name: overclock-redisinsight
     image: redis/redisinsight:3.4
     restart: unless-stopped
     depends_on:
       - overclock-redis
     ports:
-      - 5540:5540
+      - "${RI_PORT:-5540}:5540"
     volumes:
-      - ./redis/insight:/data
+      - redisinsight:/data
     environment:
-      - TZ=${TZ}
-      - RI_REDIS_HOST=${REDIS_HOST:-overclock-redis}
-      - RI_REDIS_PORT=${REDIS_PORT:-6379}
-      - RI_REDIS_USERNAME=${REDIS_USER:-}
-      - RI_REDIS_PASSWORD=${REDIS_PASS:-}
+      TZ: ${TZ}
+      RI_REDIS_HOST: ${REDIS_HOST:-overclock-redis}
+      RI_REDIS_PORT: ${REDIS_PORT:-6379}
+      RI_REDIS_USERNAME: ${REDIS_USER:-}
+      RI_REDIS_PASSWORD: ${REDIS_PASS:-}
 
-  # 데이터베이스 서버
+
+
+  # ----------------------------------------------------------------------------
+  # 2. DATABASE SERVICES (데이터베이스 서버)
+  # ----------------------------------------------------------------------------
+
+  # MariaDB 데이터베이스 서버
   overclock-database:
     profiles:
       - database
@@ -59,29 +76,31 @@ services:
         - -h
         - localhost
     ports:
-      - "3306:3306"
-    environment:
-      - TZ=${TZ}
-      - PUID=${PUID:-1000}
-      - PGID=${PUID:-1000}
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASS}
+      - "${DB_HOST_PORT:-3306}:3306"
     volumes:
       - ./database:/config
+    environment:
+      TZ: ${TZ}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
 
 
 
-  # 운영용 서버 구성
+  # ----------------------------------------------------------------------------
+  # 3. PRODUCTION SERVICES (운영 환경 서버 구성)
+  # ----------------------------------------------------------------------------
 
+  # 운영 환경 백엔드 (FastAPI)
   overclock-backend-prod:
     profiles:
       - prod
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: prod
     image: overclock-backend-prod
     container_name: overclock-backend-prod
     restart: unless-stopped
@@ -95,25 +114,30 @@ services:
     ports:
       - "${BE_PORT:-8000}:8000"
     environment: &be_env
-      - TZ=${TZ}
-      - PUID=${PUID:-1000}
-      - PGID=${PUID:-1000}
-      - DB_HOST=${DB_HOST:-overclock-database}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - REDIS_HOST=${REDIS_HOST:-overclock-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_USER=${REDIS_USER:-}
-      - REDIS_PASS=${REDIS_PASS:-}
-      - REDIS_DB=${REDIS_DB:-0}
-      - GUEST_LOGIN_ENABLE=${GUEST_LOGIN_ENABLE}
-      - GUEST_USERNAME=${GUEST_USERNAME}
-      - GUEST_EMAIL=${GUEST_EMAIL}
-      - GUEST_PASSWORD=${GUEST_PASSWORD}
-      - SECRET_KEY=${SECRET_KEY}
+      TZ: ${TZ}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      MODE: production
+      PROTO: ${BE_PROTO}
+      DB_HOST: ${DB_HOST:-overclock-database}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      REDIS_HOST: ${REDIS_HOST:-overclock-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_USER: ${REDIS_USER:-}
+      REDIS_PASS: ${REDIS_PASS:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      GUEST_LOGIN_ENABLE: ${GUEST_LOGIN_ENABLE:-false}
+      GUEST_USERNAME: ${GUEST_USERNAME:-}
+      GUEST_EMAIL: ${GUEST_EMAIL:-}
+      GUEST_PASSWORD: ${GUEST_PASSWORD:-}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: ${BE_HOST:-localhost}, ${ALLOWED_HOSTS:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1}
 
+  # 운영 환경 프론트엔드 (React / Vite)
   overclock-frontend-prod:
     profiles:
       - prod
@@ -121,30 +145,33 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: prod
-      args:
-        - VITE_BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
-        - VITE_KAKAO_MAP_API_KEY=${KAKAO_MAP_API_KEY}
+      args: &fe_args
+        VITE_BACKEND_URL: ${BE_PROTO:-http}://${BE_HOST:-localhost}:${BE_PORT:-8000}
+        VITE_KAKAO_MAP_API_KEY: ${KAKAO_MAP_API_KEY}
     image: overclock-frontend-prod
     container_name: overclock-frontend-prod
     restart: unless-stopped
     ports:
-      - "${FE_PORT:-3000}:3000"
-    environment:
-      - TZ=${TZ}
-      - PUID=${PUID:-1000}
-      - PGID=${PUID:-1000}
+      - "${FE_PROD_PORT:-3000}:3000"
+    environment: &fe_env
+      <<: *fe_args
+      TZ: ${TZ}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
 
 
 
-  # 개발용 서버 구성
+  # ----------------------------------------------------------------------------
+  # 4. DEVELOPMENT SERVICES (개발 환경 서버 구성)
+  # ----------------------------------------------------------------------------
 
+  # 개발 환경 백엔드 (FastAPI / 실시간 코드 마운트)
   overclock-backend-dev:
     profiles:
       - dev
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: dev
     image: overclock-backend-dev
     container_name: overclock-backend-dev
     restart: unless-stopped
@@ -152,10 +179,12 @@ services:
     ports:
       - "${BE_PORT:-8000}:8000"
     volumes:
-      - ./backend:/app:ro
-      - venv:/venv
-    environment: *be_env
+      - ./backend:/app
+    environment:
+      <<: *be_env
+      MODE: development
 
+  # 개발 환경 프론트엔드 (React / Vite / 실시간 코드 마운트)
   overclock-frontend-dev:
     profiles:
       - dev
@@ -167,17 +196,16 @@ services:
     container_name: overclock-frontend-dev
     restart: unless-stopped
     ports:
-      - "${FE_PORT:-5173}:5173"
+      - "${FE_DEV_PORT:-5173}:5173"
     volumes:
-      - ./frontend:/app:ro
+      - ./frontend:/app
       - node_modules:/app/node_modules
-    environment:
-      - TZ=${TZ}
-      - PUID=${PUID:-1000}
-      - PGID=${PUID:-1000}
-      - VITE_BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
-      - VITE_KAKAO_MAP_API_KEY=${KAKAO_MAP_API_KEY}
+    environment: *fe_env
 
+
+
+# 볼륨 정의
 volumes:
-  venv:
+  redis:
+  redisinsight:
   node_modules:
