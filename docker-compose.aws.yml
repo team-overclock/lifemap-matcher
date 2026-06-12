@@ -54,6 +54,8 @@ services:
         required: true
     ports:
       - "${BE_PORT:-8000}:8000"
+    volumes:
+      - ./backend_data:/app/data
     environment:
       TZ: ${TZ}
       PUID: ${PUID:-1000}

@@ -4,6 +4,7 @@ frontend
 backend
 database
 redis
+caddy
 
 # .env
 .env
