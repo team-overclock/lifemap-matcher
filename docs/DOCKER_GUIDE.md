@@ -10,16 +10,25 @@
 
 - 필요 시 `.env` 파일을 수정하여 서버 구성을 변경할 수 있음
   - 실행할 컨테이너 선택 (`COMPOSE_PROFILES` 값 설정)
-    - 초기 값으로는 데이터베이스 서버 및 개발용 백엔드/프론트엔드가 지정되어 있음
   - 데이터베이스 연결 구성 (host, port, user, password, dbname)
   - 백엔드/프론트엔드 접속 port 변경
   - etc.
-- 호스트에서 데이터베이스에 직접 연결하려면 `docker-compose.yml` 파일 상단의 주석 해제 필요
+- compose 파일 관련
+  - 로컬 환경
+    - `docker-compose.yml`를 사용
+  - AWS 등 배포 환경
+    - `docker-compose.aws.yml` 파일을 `docker-compose.yml`로 복사하여 사용
+  - 배포 환경 + 백엔드/프론트엔드에 도메인 연결 시
+    - `docker-compose.aws.yml` 파일은 파일명 그대로 복사
+    - `docker-compose.domain.yml` 퍼알을 `docker-compose.yml`로 복사
+    - 도메인은 `BE_HOST`, `FE_HOST` 값으로 설정 가능
+    - 도메인별 컨테이너로 동적 연결 -> 프론트엔드/백엔드 모두 80/443 포트 사용 가능
+    - HTTPS 자동 적용
 
 ### 이미지 빌드 및 컨테이너 실행/중지
 
 ```shell
-# 이미지 빌드
+# 이미지 빌드 (로컬 환경)
 docker compose build
 
 # 컨테이너 실행
@@ -36,8 +45,13 @@ docker compose down
 
 ## URL
 
-- 프론트: <https://localhost:5173>, <https://localhost:3000>(운영용)
-- 백엔드: <https://localhost:8000>
+> [!NOTE]
+>
+> - AWS 등 배포 환경인 경우 `localhost` 대신 IP 입력
+> - 도메인 연결 시 `http` 대신 `https` 사용 및 포트 번호는 생략 (e.g. `https://example.com`)
+
+- 프론트: <http://localhost:5173>, <http://localhost:3000>(운영용)
+- 백엔드: <http://localhost:8000>
 - 백엔드 API 문서 (각 엔드포인트에 대해 요청 및 응답 테스트 지원)
   - <http://localhost:8000/docs>
   - <http://localhost:8000/redoc> (엔드포인트 확인만 가능)
