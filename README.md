@@ -1,105 +1,64 @@
-# 팀 프로젝트 monorepo 구성 방법
+# Lifemap Matcher
 
-팀 프로젝트의 최상위 관리 저장소입니다.
-
-
-
-## 사용 시 장점?
-
-- IDE 사용 편의성
-- Docker 기반 개발 환경 자동 구성
-  - 명령어 하나로 모든 서버 실행
-  - 소스코드 수정 즉시 컨테이너에 적용
-  - 팀원간 개발 환경 통일 (언어 버전 등)
-
-
-
-## 참고: 최종 tree 구조
-
-```plain
-(monorepo)
-├── .env
-├── docker-compose.yml
-├── README.md
-├── backend/
-│   ├── Dockerfile
-│   └── README.md
-└── frontend/
-    ├── node_modules/
-    ├── Dockerfile
-    └── README.md
-```
+사용자가 선택한 주변 인프라 조건을 기반으로 가중치 스코어링을 수행하여
+최적의 주거지 Top 10을 추천해주는 서비스입니다
 
 
 
 ## 구성 방법
 
-> [!TIP]
-> Git이 설치되어 있다면 `git clone` 방식을 권장합니다.
-> (`git clone` 사용 시 GitHub 저장소와 자동으로 연결됩니다)
+> [!NOTE]
+> `git`, `docker`, `docker compose`를 먼저 설치해 주세요
 
-[git clone](#git-clone) 및 [Download ZIP](#download-zip) 방식 중 하나를 선택하여 진행해 주세요.
+### 구성 파일 다운로드
 
-### Download ZIP
+```shell
+git clone https://github.com/team-overclock/lifemap-matcher
+cd lifemap-matcher
+```
 
-1. 아래 저장소 모두 다운로드 및 압축 해제
-    - [monorepo](https://github.com/team-overclock/monorepo) (현재 저장소)
-    - [backend](https://github.com/team-overclock/backend)
-    - [frontend](https://github.com/team-overclock/frontend)
-1. `monorepo` 폴더 내 `.env.example` 파일을 `.env`로 복사
-1. `frontend` 폴더 내 빈 폴더 `node_modules` 생성
-1. 위 [최종 tree 구조](#참고-최종-tree-구조)를 참고하여 폴더 이동 및 폴더명 변경
+### 환경 변수 설정
 
-### git clone
+```shell
+cp .env.example .env
+```
+
+필요시 `.env` 파일 내부 DB 비밀번호나 포트 설정 등을 수정합니다.
+
+### 실행
+
+```shell
+docker compose up -d
+```
+
+### 커스텀 도메인 연결
 
 > [!NOTE]
-> `git --version` 명령어로 Git이 설치되어 있는지 확인해 주세요
+> HTTPS가 자동 적용되며, 로컬과 지정된 도메인 외 다른 경로로의 접속은 자동 차단됩니다.
 
-1. cmd 또는 powershell 오픈 및 원하는 위치로 이동
-    - cmd:
+연결할 도메인을 `.env` 파일 내 `FE_HOST` 및 `BE_HOST`에 설정합니다.
 
-      ```shell
-      D:  # 드라이브 변경. cd 없음 주위
-      cd path\to\folder
-      ```
+```shell
+docker compose -f docker-compose.domain.yml up -d
+```
 
-    - powershell:
+### 접속 정보
 
-      ```shell
-      # 둘 중 하나. cd로 드라이브 변경 가능
-      cd path\to\folder
-      cd D:\path\to\folder
-      ```
-
-1. 저장소 clone
-
-    ```shell
-    git clone https://github.com/team-overclock/monorepo
-
-    # 폴더 이동 후 나머지 clone
-    cd monorepo
-    git clone https://github.com/team-overclock/backend
-    git clone https://github.com/team-overclock/frontend
-    ```
-
-1. `.env.example` 파일을 `.env`로 복사 (컨테이너가 아닌 호스트에서 백/프론트 서버를 직접 실행하는 경우, 각 폴더 내 파일들도 복사)
-
-    ```shell
-    copy .env.example .env
-    ```
-
-1. `frontend` 폴더 내 빈 폴더 `node_modules` 생성
-
-    ```shell
-    mkdir frontend\node_modules
-    ```
+- Web UI: <http://localhost:3000>
+- API Server: <http://localhost:8000>
+- API Docs:
+  - Swagger UI: <http://localhost:8000/docs>
+  - Redoc: <http://localhost:8000/redoc>
+  - Scalar: <http://localhost:8000/scalar>
+- Redis UI: <http://localhost:5540>
 
 
 
-## 추가 가이드
+## Related
 
-컨테이너가 아닌 호스트에서 직접 백엔드 및 프론트엔드를 실행하는 방법은
-각 저장소의 README를 참고해 주세요.
+이 저장소는 서비스 실행을 위한 오케스트레이션 환경을 제공합니다.
 
-- [도커 기반 개발 환경 구축 및 실행 방법](./docs/DOCKER_GUIDE.md)
-- [Docker Hub에 이미지 올리는 방법](./docs/DOCKER_HUB_RELEASE_GUIDE.md)
+각 서비스별 상세 내용은 아래 저장소에서 확인하실 수 있습니다.
+
+- **Frontend**: [team-overclock/frontend](https://github.com/team-overclock/frontend)
+- **Backend**: [team-overclock/backend](https://github.com/team-overclock/backend)

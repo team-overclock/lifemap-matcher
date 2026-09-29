@@ -1,7 +1,3 @@
-# ==============================================================================
-# Overclock Project - Docker Compose Configuration (docker-compose.yml)
-# ==============================================================================
-
 # 공통 헬스체크 설정 템플릿 (앵커로 사용)
 x-health-check-times: &healthcheck_times
   interval: 5s
@@ -17,9 +13,7 @@ services:
   # ----------------------------------------------------------------------------
 
   # Redis 서버
-  overclock-redis:
-    profiles:
-      - redis
+  redis:
     container_name: overclock-redis
     image: redis:8.6
     restart: unless-stopped
@@ -30,29 +24,29 @@ services:
         - redis-cli
         - ping
     volumes:
-      - redis:/data
+      - redis-data:/data
     environment:
       TZ: ${TZ}
 
   # Redis 모니터링 및 관리 도구 (웹 GUI)
-  overclock-redisinsight:
+  redis-ui:
     profiles:
-      - redisinsight
-    container_name: overclock-redisinsight
+      - redis-ui
+    container_name: overclock-redis-ui
     image: redis/redisinsight:3.4
     restart: unless-stopped
     depends_on:
-      - overclock-redis
+      redis:
+        condition: service_healthy
+        required: true
     ports:
-      - "${RI_PORT:-5540}:5540"
+      - "${REDIS_UI_PORT:-5540}:5540"
     volumes:
-      - redisinsight:/data
+      - redisinsight-data:/data
     environment:
       TZ: ${TZ}
-      RI_REDIS_HOST: ${REDIS_HOST:-overclock-redis}
-      RI_REDIS_PORT: ${REDIS_PORT:-6379}
-      RI_REDIS_USERNAME: ${REDIS_USER:-}
-      RI_REDIS_PASSWORD: ${REDIS_PASS:-}
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: 6379
 
 
 
@@ -61,7 +55,7 @@ services:
   # ----------------------------------------------------------------------------
 
   # MariaDB 데이터베이스 서버
-  overclock-database:
+  database:
     profiles:
       - database
     image: lscr.io/linuxserver/mariadb:latest
@@ -76,9 +70,9 @@ services:
         - -h
         - localhost
     ports:
-      - "${DB_HOST_PORT:-3306}:3306"
+      - "127.0.0.1:${DB_EXTERNAL_PORT:-3306}:3306"
     volumes:
-      - ./database:/config
+      - mariadb-data:/config
     environment:
       TZ: ${TZ}
       PUID: ${PUID:-1000}
@@ -91,121 +85,67 @@ services:
 
 
   # ----------------------------------------------------------------------------
-  # 3. PRODUCTION SERVICES (운영 환경 서버 구성)
+  # 3. SERVICES (서버 구성)
   # ----------------------------------------------------------------------------
 
-  # 운영 환경 백엔드 (FastAPI)
-  overclock-backend-prod:
-    profiles:
-      - prod
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: overclock-backend-prod
-    container_name: overclock-backend-prod
+  # 백엔드 (FastAPI)
+  backend:
+    image: ghcr.io/team-overclock/backend:latest
+    container_name: overclock-backend
     restart: unless-stopped
-    depends_on: &be_depends_on
-      overclock-redis:
+    depends_on:
+      redis:
         condition: service_healthy
-        required: false
-      overclock-database:
+        required: true
+      database:
         condition: service_healthy
         required: false
     ports:
       - "${BE_PORT:-8000}:8000"
-    environment: &be_env
+    volumes:
+      - ./backend-data:/app/data
+    environment:
       TZ: ${TZ}
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
-      MODE: production
+      MODE: development  # hot reload, swagger/scalar 사용하려면 development로 변경
       PROTO: ${BE_PROTO}
-      DB_HOST: ${DB_HOST:-overclock-database}
-      DB_PORT: ${DB_PORT:-3306}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      REDIS_HOST: ${REDIS_HOST:-overclock-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_USER: ${REDIS_USER:-}
-      REDIS_PASS: ${REDIS_PASS:-}
-      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER:
+      REDIS_PASS:
+      REDIS_DB: 0
       GUEST_LOGIN_ENABLE: ${GUEST_LOGIN_ENABLE:-false}
       GUEST_USERNAME: ${GUEST_USERNAME:-}
       GUEST_EMAIL: ${GUEST_EMAIL:-}
       GUEST_PASSWORD: ${GUEST_PASSWORD:-}
       SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOSTS: ${BE_HOST:-localhost}, ${ALLOWED_HOSTS:-}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1}
+      ALLOWED_HOSTS: localhost,127.0.0.1,${BE_HOST}
+      TRUSTED_HOSTS: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1
 
   # 운영 환경 프론트엔드 (React / Vite)
-  overclock-frontend-prod:
-    profiles:
-      - prod
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: prod
-      args: &fe_args
-        VITE_BACKEND_URL: ${BE_PROTO:-http}://${BE_HOST:-localhost}:${BE_PORT:-8000}
-        VITE_KAKAO_MAP_API_KEY: ${KAKAO_MAP_API_KEY}
-    image: overclock-frontend-prod
-    container_name: overclock-frontend-prod
+  frontend:
+    image: ghcr.io/team-overclock/frontend:latest
+    container_name: overclock-frontend
     restart: unless-stopped
-    ports:
-      - "${FE_PROD_PORT:-3000}:3000"
-    environment: &fe_env
-      <<: *fe_args
+    ports: 
+    - "${FE_PORT:-3000}:3000"
+    environment:
       TZ: ${TZ}
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
-
-
-
-  # ----------------------------------------------------------------------------
-  # 4. DEVELOPMENT SERVICES (개발 환경 서버 구성)
-  # ----------------------------------------------------------------------------
-
-  # 개발 환경 백엔드 (FastAPI / 실시간 코드 마운트)
-  overclock-backend-dev:
-    profiles:
-      - dev
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: overclock-backend-dev
-    container_name: overclock-backend-dev
-    restart: unless-stopped
-    depends_on: *be_depends_on
-    ports:
-      - "${BE_PORT:-8000}:8000"
-    volumes:
-      - ./backend:/app
-    environment:
-      <<: *be_env
-      MODE: development
-
-  # 개발 환경 프론트엔드 (React / Vite / 실시간 코드 마운트)
-  overclock-frontend-dev:
-    profiles:
-      - dev
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: dev
-    image: overclock-frontend-dev
-    container_name: overclock-frontend-dev
-    restart: unless-stopped
-    ports:
-      - "${FE_DEV_PORT:-5173}:5173"
-    volumes:
-      - ./frontend:/app
-      - node_modules:/app/node_modules
-    environment: *fe_env
+      VITE_BACKEND_URL: ${BE_PROTO}://${BE_HOST}:${BE_PORT}
+      VITE_KAKAO_MAP_API_KEY: ${KAKAO_MAP_API_KEY}
 
 
 
 # 볼륨 정의
 volumes:
-  redis:
-  redisinsight:
-  node_modules:
+  redis-data:
+  redisinsight-data:
+  mariadb-data:

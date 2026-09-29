@@ -1,7 +1,7 @@
-# 오직 도메인 연결을 위한 프록시 구성이므로 기본 구성은 docker-compose.aws.yml 그대로 사용
-# .evnv의 FE_HOST, BE_HOST 값만 사용할 도메인으로 변경하면 됨
+# 오직 도메인 연결을 위한 프록시 구성이므로 기본 구성은 docker-compose.yml 그대로 사용
+# .env 파일의 FE_HOST, BE_HOST 값만 사용할 도메인으로 변경하면 됨
 include:
-- docker-compose.aws.yml
+- docker-compose.yml
 
 
 
@@ -28,12 +28,16 @@ services:
   # 2. CONNECTED DOMAINS (도메인별로 연결할 실제 서비스 컨테이너)
   # ----------------------------------------------------------------------------
 
-  lifemap-backend:
+  backend:
+    ports: !override
+      - "127.0.0.1:${BE_PORT:-8000}:8000"
     labels:
       caddy: ${BE_HOST}
       caddy.reverse_proxy: "{{upstreams 8000}}"
 
-  lifemap-frontend:
+  frontend:
+    ports: !override
+      - "127.0.0.1:${FE_PORT:-3000}:3000"
     environment:
       VITE_BACKEND_URL: https://${BE_HOST}
     labels:
